@@ -1,0 +1,18 @@
+# Gradle
+.gradle/
+build/
+*.apk
+*.aar
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Android
+.DS_Store
+local.properties
+
+# Outputs
+/androidApp/release/
