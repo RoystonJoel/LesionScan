@@ -14,22 +14,15 @@ class FrameProcessor {
 
     /**
      * Calculate lighting level from pixel data.
+     * Returns the average brightness directly (simpler, more accurate).
      * @param imageArray Normalized float array [0, 1]
-     * @return Lighting score [0, 1] where 0.5 is ideal
+     * @return Lighting level [0, 1] where 1 = fully bright
      */
     fun calculateLighting(imageArray: FloatArray): Float {
         if (imageArray.isEmpty()) return 0f
 
-        // Calculate average brightness
-        val avgBrightness = imageArray.average().toFloat()
-
-        // Score: peak at 0.5 (ideal), penalize too dark or too bright
-        return when {
-            avgBrightness < 0.2f -> avgBrightness / 0.2f * 0.3f  // Too dark, score < 0.3
-            avgBrightness <= 0.5f -> (avgBrightness / 0.5f) * 0.8f + 0.2f  // Ramp up to 1.0 at 0.5
-            avgBrightness <= 0.8f -> 1.0f  // Ideal range
-            else -> 1.0f - ((avgBrightness - 0.8f) / 0.2f * 0.3f)  // Too bright, penalize
-        }
+        // Simply return average brightness
+        return imageArray.average().toFloat().coerceIn(0f, 1f)
     }
 
     /**
