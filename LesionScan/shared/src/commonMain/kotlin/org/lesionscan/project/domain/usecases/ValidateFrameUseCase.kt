@@ -14,8 +14,8 @@ class ValidateFrameUseCase {
 
     // Thresholds for optimal conditions
     companion object {
-        const val LIGHTING_MIN = 0.15f          // Too dark below this
-        const val LIGHTING_MAX = 0.90f          // Overexposed above this
+        const val LIGHTING_MIN = 0.25f          // Too dark below this
+        const val LIGHTING_MAX = 0.95f          // Overexposed above this
         const val SHARPNESS_THRESHOLD = 0.6f    // Laplacian score
         const val LESION_AREA_MIN = 0.15f       // Lesion should fill 15%+ of frame
         const val LESION_AREA_MAX = 0.65f       // But not more than 65% (too close)
