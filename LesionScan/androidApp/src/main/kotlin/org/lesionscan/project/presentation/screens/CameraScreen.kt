@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -29,7 +30,6 @@ import org.lesionscan.project.presentation.components.CameraPreview
 import org.lesionscan.project.presentation.components.GuidanceOverlay
 import org.lesionscan.project.presentation.viewmodels.CameraViewModel
 
-
 @Composable
 fun CameraScreen(lifecycleOwner: LifecycleOwner) {
     val context = LocalContext.current
@@ -44,7 +44,6 @@ fun CameraScreen(lifecycleOwner: LifecycleOwner) {
         }
     }
 
-    // Start camera on compose enter
     DisposableEffect(Unit) {
         viewModel.startCamera(previewView)
         onDispose {
@@ -53,6 +52,7 @@ fun CameraScreen(lifecycleOwner: LifecycleOwner) {
     }
 
     val frameQualityState = viewModel.frameQualityState.collectAsState()
+    val isFlashOn = viewModel.isFlashOn.collectAsState()
     val state = frameQualityState.value
 
     Box(
@@ -64,11 +64,25 @@ fun CameraScreen(lifecycleOwner: LifecycleOwner) {
             modifier = Modifier.fillMaxSize()
         )
 
-        // Guidance overlay (circles, indicators, text)
+        // Guidance overlay
         GuidanceOverlay(
             frameQualityState = state,
             modifier = Modifier.fillMaxSize()
         )
+
+        // Flash toggle button (top-right)
+        OutlinedButton(
+            onClick = { viewModel.toggleFlash() },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(16.dp)
+        ) {
+            Text(
+                if (isFlashOn.value) "🔦 Flash On" else "🔦 Flash Off",
+                fontSize = 12.sp,
+                color = if (isFlashOn.value) Color.Yellow else Color.Gray
+            )
+        }
 
         // Bottom control panel
         Column(

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
+import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
@@ -19,13 +20,13 @@ import org.lesionscan.project.infrastructure.ml.MockModelRepository
 import java.util.concurrent.Executors
 
 data class FrameQualityState(
-    val isLighting: Boolean = false,      // Green if true
-    val isFocus: Boolean = false,         // Green if true
-    val isDistance: Boolean = false,      // Green if true
-    val isOptimal: Boolean = false,       // All three true
-    val lightingLevel: Float = 0f,        // 0-1 (for progress bars if needed)
-    val focusLevel: Float = 0f,           // 0-1
-    val distanceLevel: Float = 0f         // 0-1
+    val isLighting: Boolean = false,
+    val isFocus: Boolean = false,
+    val isDistance: Boolean = false,
+    val isOptimal: Boolean = false,
+    val lightingLevel: Float = 0f,
+    val focusLevel: Float = 0f,
+    val distanceLevel: Float = 0f
 )
 
 class CameraViewModel(
@@ -40,13 +41,17 @@ class CameraViewModel(
     private val _frameQualityState = MutableStateFlow(FrameQualityState())
     val frameQualityState: StateFlow<FrameQualityState> = _frameQualityState
 
+    private val _isFlashOn = MutableStateFlow(true)  // Flash enabled by default
+    val isFlashOn: StateFlow<Boolean> = _isFlashOn
+
     private var cameraProvider: ProcessCameraProvider? = null
+    private var cameraControl: androidx.camera.core.CameraControl? = null
 
     fun startCamera(previewView: PreviewView) {
         viewModelScope.launch {
             try {
                 cameraProvider = ProcessCameraProvider.getInstance(context).let { future ->
-                    future.get()  // Block until ready
+                    future.get()
                 }
 
                 val provider = cameraProvider ?: return@launch
@@ -73,18 +78,65 @@ class CameraViewModel(
                     .requireLensFacing(CameraSelector.LENS_FACING_BACK)
                     .build()
 
-                provider.bindToLifecycle(
+                val cameraInfo = provider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
                     preview,
                     imageAnalysis
                 )
 
-                println("✓ Camera preview started")
+                // Get camera control for torch/flash
+                cameraControl = cameraInfo.cameraControl
+
+                // Enable flash/torch by default
+                enableFlash()
+
+                println("✓ Camera preview started with flash enabled")
 
             } catch (e: Exception) {
                 println("✗ Camera start failed: ${e.message}")
             }
+        }
+    }
+
+    /**
+     * Enable flash/torch light
+     */
+    fun enableFlash() {
+        viewModelScope.launch {
+            try {
+                cameraControl?.enableTorch(true)
+                _isFlashOn.value = true
+                println("✓ Flash enabled")
+            } catch (e: Exception) {
+                println("✗ Failed to enable flash: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Disable flash/torch light
+     */
+    fun disableFlash() {
+        viewModelScope.launch {
+            try {
+                cameraControl?.enableTorch(false)
+                _isFlashOn.value = false
+                println("✓ Flash disabled")
+            } catch (e: Exception) {
+                println("✗ Failed to disable flash: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Toggle flash on/off
+     */
+    fun toggleFlash() {
+        if (_isFlashOn.value) {
+            disableFlash()
+        } else {
+            enableFlash()
         }
     }
 
@@ -93,7 +145,6 @@ class CameraViewModel(
             val width = imageProxy.width
             val height = imageProxy.height
 
-            // Extract brightness from first plane (Y channel in YUV)
             val planes = imageProxy.planes
             val yPlane = planes[0]
 
@@ -101,16 +152,13 @@ class CameraViewModel(
             val data = ByteArray(buffer.remaining())
             buffer.get(data)
 
-            // Calculate metrics from this frame
             val pixelArray = data.map { (it.toInt() and 0xFF) / 255f }.toFloatArray()
             val lighting = frameProcessor.calculateLighting(pixelArray)
             val sharpness = frameProcessor.calculateSharpness(pixelArray, width, height)
             val lesionArea = frameProcessor.calculateLesionArea(pixelArray)
 
-            // Validate frame
             val frameQuality = validateFrameUseCase.execute(lighting, sharpness, lesionArea)
 
-            // Update UI state with boolean flags
             _frameQualityState.value = FrameQualityState(
                 isLighting = frameQuality.isLightingGood,
                 isFocus = frameQuality.isFocusSharp,
@@ -129,6 +177,8 @@ class CameraViewModel(
     }
 
     fun stopCamera() {
+        // Disable flash before closing
+        disableFlash()
         cameraProvider?.unbindAll()
     }
 
