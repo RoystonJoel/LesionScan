@@ -4,7 +4,6 @@ import android.content.Context
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
-import androidx.camera.core.TorchState
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.LifecycleOwner
@@ -13,6 +12,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.lesionscan.project.domain.entities.LesionClassification
 import org.lesionscan.project.domain.usecases.ClassifyLesionUseCase
 import org.lesionscan.project.domain.usecases.ValidateFrameUseCase
 import org.lesionscan.project.infrastructure.camera.FrameProcessor
@@ -41,9 +41,16 @@ class CameraViewModel(
     private val _frameQualityState = MutableStateFlow(FrameQualityState())
     val frameQualityState: StateFlow<FrameQualityState> = _frameQualityState
 
-    private val _isFlashOn = MutableStateFlow(true)  // Flash enabled by default
+    private val _isFlashOn = MutableStateFlow(true)
     val isFlashOn: StateFlow<Boolean> = _isFlashOn
 
+    private val _isClassifying = MutableStateFlow(false)
+    val isClassifying: StateFlow<Boolean> = _isClassifying
+
+    private val _classificationResult = MutableStateFlow<LesionClassification?>(null)
+    val classificationResult: StateFlow<LesionClassification?> = _classificationResult
+
+    private var currentFrameData: FloatArray? = null
     private var cameraProvider: ProcessCameraProvider? = null
     private var cameraControl: androidx.camera.core.CameraControl? = null
 
@@ -57,12 +64,10 @@ class CameraViewModel(
                 val provider = cameraProvider ?: return@launch
                 provider.unbindAll()
 
-                // Preview use case
                 val preview = Preview.Builder().build().apply {
                     setSurfaceProvider(previewView.surfaceProvider)
                 }
 
-                // Image analysis for frame validation
                 val imageAnalysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                     .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
@@ -85,10 +90,7 @@ class CameraViewModel(
                     imageAnalysis
                 )
 
-                // Get camera control for torch/flash
                 cameraControl = cameraInfo.cameraControl
-
-                // Enable flash/torch by default
                 enableFlash()
 
                 println("✓ Camera preview started with flash enabled")
@@ -99,45 +101,71 @@ class CameraViewModel(
         }
     }
 
-    /**
-     * Enable flash/torch light
-     */
     fun enableFlash() {
         viewModelScope.launch {
             try {
                 cameraControl?.enableTorch(true)
                 _isFlashOn.value = true
-                println("✓ Flash enabled")
             } catch (e: Exception) {
                 println("✗ Failed to enable flash: ${e.message}")
             }
         }
     }
 
-    /**
-     * Disable flash/torch light
-     */
     fun disableFlash() {
         viewModelScope.launch {
             try {
                 cameraControl?.enableTorch(false)
                 _isFlashOn.value = false
-                println("✓ Flash disabled")
             } catch (e: Exception) {
                 println("✗ Failed to disable flash: ${e.message}")
             }
         }
     }
 
-    /**
-     * Toggle flash on/off
-     */
     fun toggleFlash() {
         if (_isFlashOn.value) {
             disableFlash()
         } else {
             enableFlash()
         }
+    }
+
+    /**
+     * Capture the current frame and run ML inference.
+     * Called when user clicks the capture button.
+     */
+    fun captureAndClassify() {
+        viewModelScope.launch {
+            if (currentFrameData == null) {
+                println("✗ No frame data available")
+                return@launch
+            }
+
+            _isClassifying.value = true
+            println("🔄 Starting inference...")
+
+            try {
+                val frame = currentFrameData!!
+                val classification = classifyLesionUseCase.execute(frame)
+
+                _classificationResult.value = classification
+                println("✓ Classification complete: ${classification.riskLevel} (${String.format("%.2f", classification.riskScore)})")
+
+            } catch (e: Exception) {
+                println("✗ Inference failed: ${e.message}")
+            } finally {
+                _isClassifying.value = false
+            }
+        }
+    }
+
+    /**
+     * Reset results and go back to camera
+     */
+    fun resetCapture() {
+        _classificationResult.value = null
+        currentFrameData = null
     }
 
     private fun processFrame(imageProxy: androidx.camera.core.ImageProxy) {
@@ -153,6 +181,10 @@ class CameraViewModel(
             buffer.get(data)
 
             val pixelArray = data.map { (it.toInt() and 0xFF) / 255f }.toFloatArray()
+
+            // Store current frame for capture
+            currentFrameData = pixelArray
+
             val lighting = frameProcessor.calculateLighting(pixelArray)
             val sharpness = frameProcessor.calculateSharpness(pixelArray, width, height)
             val lesionArea = frameProcessor.calculateLesionArea(pixelArray)
@@ -177,7 +209,6 @@ class CameraViewModel(
     }
 
     fun stopCamera() {
-        // Disable flash before closing
         disableFlash()
         cameraProvider?.unbindAll()
     }
