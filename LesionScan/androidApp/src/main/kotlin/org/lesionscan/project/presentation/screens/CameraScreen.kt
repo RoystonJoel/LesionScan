@@ -53,120 +53,118 @@ fun CameraScreen(lifecycleOwner: LifecycleOwner) {
 
     val frameQualityState = viewModel.frameQualityState.collectAsState()
     val isFlashOn = viewModel.isFlashOn.collectAsState()
+    val isClassifying = viewModel.isClassifying.collectAsState()
+    val classificationResult = viewModel.classificationResult.collectAsState()
+
     val state = frameQualityState.value
+    val result = classificationResult.value
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        // Camera preview
-        CameraPreview(
-            previewView = previewView,
-            modifier = Modifier.fillMaxSize()
+    // Show result screen if classification is available
+    if (result != null) {
+        ResultScreen(
+            classification = result,
+            onRetry = {
+                viewModel.resetCapture()
+            }
         )
+    } else {
+        // Show camera screen
+        Box(modifier = Modifier.fillMaxSize()) {
+            CameraPreview(previewView = previewView, modifier = Modifier.fillMaxSize())
+            GuidanceOverlay(frameQualityState = state, modifier = Modifier.fillMaxSize())
 
-        // Guidance overlay
-        GuidanceOverlay(
-            frameQualityState = state,
-            modifier = Modifier.fillMaxSize()
-        )
-
-        // Flash toggle button (top-right)
-        OutlinedButton(
-            onClick = { viewModel.toggleFlash() },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(16.dp)
-        ) {
-            Text(
-                if (isFlashOn.value) "🔦 Flash On" else "🔦 Flash Off",
-                fontSize = 12.sp,
-                color = if (isFlashOn.value) Color.Yellow else Color.Gray
-            )
-        }
-
-        // Bottom control panel
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.8f))
-                .padding(16.dp)
-        ) {
-            Text("Frame Quality", color = Color.White, fontSize = 14.sp)
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Lighting progress
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Lighting", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
-                LinearProgressIndicator(
-                    progress = state.lightingLevel,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp),
-                    color = if (state.isLighting) Color.Green else Color.Red
-                )
-                Text(
-                    String.format("%.0f%%", state.lightingLevel * 100),
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(start = 8.dp).width(30.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Focus progress
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Focus", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
-                LinearProgressIndicator(
-                    progress = state.focusLevel,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp),
-                    color = if (state.isFocus) Color.Green else Color.Red
-                )
-                Text(
-                    String.format("%.0f%%", state.focusLevel * 100),
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(start = 8.dp).width(30.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Distance progress
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Distance", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
-                LinearProgressIndicator(
-                    progress = state.distanceLevel,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(4.dp),
-                    color = if (state.isDistance) Color.Green else Color.Red
-                )
-                Text(
-                    String.format("%.0f%%", state.distanceLevel * 100),
-                    color = Color.Gray,
-                    fontSize = 10.sp,
-                    modifier = Modifier.padding(start = 8.dp).width(30.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Capture button
-            Button(
-                onClick = { /* TODO: Trigger capture + inference */ },
-                enabled = state.isOptimal,
+            OutlinedButton(
+                onClick = { viewModel.toggleFlash() },
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .fillMaxWidth(0.8f)
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
             ) {
                 Text(
-                    if (state.isOptimal) "✓ Capture" else "⟳ Adjust Camera",
-                    fontSize = 14.sp
+                    if (isFlashOn.value) "🔦 Flash On" else "🔦 Flash Off",
+                    fontSize = 12.sp,
+                    color = if (isFlashOn.value) Color.Yellow else Color.Gray
                 )
+            }
+
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .padding(16.dp)
+            ) {
+                Text("Frame Quality", color = Color.White, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Lighting", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
+                    LinearProgressIndicator(
+                        progress = state.lightingLevel,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp),
+                        color = if (state.isLighting) Color.Green else Color.Red
+                    )
+                    Text(
+                        String.format("%.0f%%", state.lightingLevel * 100),
+                        color = Color.Gray,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(start = 8.dp).width(30.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Focus", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
+                    LinearProgressIndicator(
+                        progress = state.focusLevel,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp),
+                        color = if (state.isFocus) Color.Green else Color.Red
+                    )
+                    Text(
+                        String.format("%.0f%%", state.focusLevel * 100),
+                        color = Color.Gray,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(start = 8.dp).width(30.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Distance", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.width(60.dp))
+                    LinearProgressIndicator(
+                        progress = state.distanceLevel,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp),
+                        color = if (state.isDistance) Color.Green else Color.Red
+                    )
+                    Text(
+                        String.format("%.0f%%", state.distanceLevel * 100),
+                        color = Color.Gray,
+                        fontSize = 10.sp,
+                        modifier = Modifier.padding(start = 8.dp).width(30.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Button(
+                    onClick = { viewModel.captureAndClassify() },
+                    enabled = state.isOptimal && !isClassifying.value,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .fillMaxWidth(0.8f)
+                ) {
+                    Text(
+                        if (isClassifying.value) "⟳ Processing..." else if (state.isOptimal) "✓ Capture" else "⟳ Adjust Camera",
+                        fontSize = 14.sp
+                    )
+                }
             }
         }
     }
