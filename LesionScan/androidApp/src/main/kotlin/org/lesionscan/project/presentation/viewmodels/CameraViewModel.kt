@@ -17,6 +17,7 @@ import org.lesionscan.project.domain.usecases.ClassifyLesionUseCase
 import org.lesionscan.project.domain.usecases.ValidateFrameUseCase
 import org.lesionscan.project.infrastructure.camera.FrameProcessor
 import org.lesionscan.project.infrastructure.ml.MockModelRepository
+import org.lesionscan.project.infrastructure.ml.ModelSandboxManager
 import java.util.concurrent.Executors
 
 data class FrameQualityState(
@@ -35,7 +36,12 @@ class CameraViewModel(
 ) : ViewModel() {
 
     private val validateFrameUseCase = ValidateFrameUseCase()
-    private val classifyLesionUseCase = ClassifyLesionUseCase(MockModelRepository())
+
+    // real model:
+    private val classifyLesionUseCase = ClassifyLesionUseCase(ModelSandboxManager(context))
+
+    // mock - generates random:
+    //private val classifyLesionUseCase = ClassifyLesionUseCase(MockModelRepository())
     private val frameProcessor = FrameProcessor()
 
     private val _frameQualityState = MutableStateFlow(FrameQualityState())
