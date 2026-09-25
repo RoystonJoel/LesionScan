@@ -8,6 +8,9 @@ import org.lesionscan.project.domain.usecases.IModelRepository
 import java.io.FileInputStream
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
+//import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
+//import org.tensorflow.lite.DataType
+
 
 class ModelSandboxManager(
     private val context: Context
@@ -52,11 +55,9 @@ class ModelSandboxManager(
                 ?: throw RuntimeException("Interpreter not initialized")
 
             try {
-                // Create input array (batch_size=1, 224x224x3)
-                val inputShape = intArrayOf(1, 224, 224, 3)
+                // Reshape input to [1, 224, 224, 3]
                 val inputData = Array(1) { Array(224) { Array(224) { FloatArray(3) } } }
 
-                // Fill inputData from frameImageArray
                 var idx = 0
                 for (h in 0 until 224) {
                     for (w in 0 until 224) {
@@ -66,22 +67,44 @@ class ModelSandboxManager(
                     }
                 }
 
-                // Output buffer for single risk score
-                val outputData = FloatArray(1)
+                // Output shape [1, 5] - MUST be 2D to match tensor output
+                val outputData = Array(1) { FloatArray(5) }
 
                 // Run inference
                 val startTime = System.currentTimeMillis()
                 interpreter.run(inputData, outputData)
                 val inferenceTimeMs = System.currentTimeMillis() - startTime
 
-                val riskScore = outputData[0]
+                // Extract probabilities from first (and only) batch
+                val probabilities = outputData[0]
+                println("Probabilities: ${probabilities.contentToString()}")
 
-                println("✓ Inference completed in ${inferenceTimeMs}ms, risk: $riskScore")
+                // Find class with highest probability
+                var predictedClassIndex = 0
+                var maxProbability = 0f
+                for (i in probabilities.indices) {
+                    if (probabilities[i] > maxProbability) {
+                        maxProbability = probabilities[i]
+                        predictedClassIndex = i
+                    }
+                }
+
+                println("✓ Predicted class: $predictedClassIndex with probability: ${String.format("%.2f", maxProbability)}")
+                println("✓ Inference completed in ${inferenceTimeMs}ms")
+
+                // Map to risk score
+                val riskScore = when (predictedClassIndex) {
+                    0 -> 0.9f   // Melanoma
+                    2 -> 0.7f   // BCC
+                    4 -> 0.5f   // Dermatofibroma
+                    else -> 0.2f
+                } * maxProbability
 
                 riskScore.coerceIn(0f, 1f)
 
             } catch (e: Exception) {
                 println("✗ Inference failed: ${e.message}")
+                e.printStackTrace()
                 throw RuntimeException("Inference execution failed", e)
             }
         }
