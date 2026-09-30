@@ -16,3 +16,11 @@ local.properties
 
 # Outputs
 /androidApp/release/
+
+# Ignore all files inside sorted folders
+sorted_dataset/melanoma/*
+sorted_dataset/non_melanoma/*
+
+# Keep the directories tracked in Git via .gitkeep
+!sorted_dataset/melanoma/.gitkeep
+!sorted_dataset/non_melanoma/.gitkeep
