@@ -57,13 +57,14 @@ object ImageTestUtils {
         resized.getPixels(pixels, 0, targetSize, 0, 0, targetSize, targetSize)
         resized.recycle()
 
-        // 5. Convert to normalized RGB [0, 1] float array
+
+        // 5. Convert to normalized RGB [-1, 1] float array
         val floatArray = FloatArray(targetSize * targetSize * 3)
         var idx = 0
         for (pixel in pixels) {
-            floatArray[idx++] = ((pixel shr 16) and 0xFF) / 255f
-            floatArray[idx++] = ((pixel shr 8) and 0xFF) / 255f
-            floatArray[idx++] = (pixel and 0xFF) / 255f
+            floatArray[idx++] = (((pixel shr 16) and 0xFF) / 127.5f) - 1.0f // Red
+            floatArray[idx++] = (((pixel shr 8) and 0xFF) / 127.5f) - 1.0f  // Green
+            floatArray[idx++] = ((pixel and 0xFF) / 127.5f) - 1.0f          // Blue
         }
 
         return floatArray
