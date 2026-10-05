@@ -103,32 +103,25 @@ class ModelSandboxManagerIntegrationTest {
     }
 
     @Test
-    fun testModelInferenceTime() {
-        runBlocking {
-            val melanomaFiles = ImageTestUtils.getImageFiles(context, "melanoma", limit = 1)
+    fun testModelInferenceTime() = runBlocking {
+        val melanomaFiles = ImageTestUtils.getImageFiles(context, "melanoma", limit = 2)
+        if (melanomaFiles.isEmpty()) return@runBlocking
 
-            if (melanomaFiles.isEmpty()) {
-                println("No test images found, skipping inference time test")
-                return@runBlocking
-            }
+        // 1. Warm-up run (discard results)
+        val warmupArray = ImageTestUtils.loadImageAsFloatArray(context, "melanoma/${melanomaFiles.first()}")
+        classifyUseCase.execute(warmupArray)
 
-            val filename = melanomaFiles.first()
-            val imageArray = ImageTestUtils.loadImageAsFloatArray(context, "melanoma/$filename")
-            val classification = classifyUseCase.execute(imageArray)
+        // 2. Actual timed run
+        val filename = melanomaFiles.last()
+        val imageArray = ImageTestUtils.loadImageAsFloatArray(context, "melanoma/$filename")
+        val classification = classifyUseCase.execute(imageArray)
 
-            println("Inference time: ${classification.inferenceTimeMs}ms")
+        println("Warm Inference time: ${classification.inferenceTimeMs}ms")
 
-            // Should be sub-1 second per Milestone 1 spec
-            assert(
-                classification.inferenceTimeMs < 1000,
-                { "Inference should be < 1000ms, got ${classification.inferenceTimeMs}ms" }
-            )
-
-            // Should be reasonably fast (< 500ms on mid-range hardware)
-            if (classification.inferenceTimeMs > 500) {
-                println("⚠ Warning: Inference took ${classification.inferenceTimeMs}ms (target < 500ms)")
-            }
-        }
+        assertTrue(
+            "Inference should be < 1000ms, got ${classification.inferenceTimeMs}ms",
+            classification.inferenceTimeMs < 1000
+        )
     }
 
     @Test
