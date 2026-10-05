@@ -49,31 +49,32 @@ class ModelSandboxManager(
         return withContext(Dispatchers.Default) {
             initializeModel()
 
-            val interpreter = interpreter
+            val activeInterpreter = interpreter
                 ?: throw RuntimeException("Interpreter not initialized")
 
             try {
-                // Reshape input to [1, 224, 224, 3]
-                val inputData = Array(1) { Array(224) { Array(224) { FloatArray(3) } } }
+                // 1. Reset buffer position and load flat array directly
+                inputBuffer.rewind()
 
-                var idx = 0
-                for (h in 0 until 224) {
-                    for (w in 0 until 224) {
-                        for (c in 0 until 3) {
-                            inputData[0][h][w][c] = if (idx < frameImageArray.size) frameImageArray[idx++] else 0f
-                        }
-                    }
+                val expectedSize = 224 * 224 * 3
+                val limit = minOf(frameImageArray.size, expectedSize)
+
+                // Safely copy only up to the buffer's capacity
+                for (i in 0 until limit) {
+                    inputBuffer.putFloat(frameImageArray[i])
                 }
 
-                // Output shape [1, 5] - MUST be 2D to match tensor output
-                val outputData = Array(1) { FloatArray(5) }
+                // Pad with zeros if the array is smaller than expected
+                for (i in limit until expectedSize) {
+                    inputBuffer.putFloat(0f)
+                }
 
-                // Run inference
+                // 2. Run inference using the pre-allocated buffer and array
                 val startTime = System.currentTimeMillis()
-                interpreter.run(inputData, outputData)
+                activeInterpreter.run(inputBuffer, outputData)
                 val inferenceTimeMs = System.currentTimeMillis() - startTime
 
-                // Extract probabilities from first (and only) batch
+                // 3. Extract and evaluate results
                 val probabilities = outputData[0]
                 println("Probabilities: ${probabilities.contentToString()}")
 
