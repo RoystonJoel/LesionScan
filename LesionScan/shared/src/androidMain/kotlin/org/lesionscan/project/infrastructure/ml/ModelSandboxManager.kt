@@ -2,15 +2,16 @@ package org.lesionscan.project.infrastructure.ml
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.tensorflow.lite.Interpreter
 import org.lesionscan.project.domain.usecases.IModelRepository
 import java.io.FileInputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.MappedByteBuffer
 import java.nio.channels.FileChannel
-//import org.tensorflow.lite.support.tensorbuffer.TensorBuffer
-//import org.tensorflow.lite.DataType
-
 
 class ModelSandboxManager(
     private val context: Context
@@ -18,17 +19,29 @@ class ModelSandboxManager(
 
     private var interpreter: Interpreter? = null
     private val modelName = "lesion_classifier_tflite.tflite"
+    private val initializationMutex = Mutex()
 
-    private fun initializeModel() {
+    // Pre-allocate buffer once: 1 batch * 224 width * 224 height * 3 channels * 4 bytes per float
+    private val inputBuffer = ByteBuffer.allocateDirect(1 * 224 * 224 * 3 * 4).apply {
+        order(ByteOrder.nativeOrder())
+    }
+
+    // Pre-allocate output array
+    private val outputData = Array(1) { FloatArray(5) }
+
+    private suspend fun initializeModel() {
         if (interpreter != null) return
 
-        try {
-            val modelBuffer = loadModelFromAssets(modelName)
-            interpreter = Interpreter(modelBuffer)
-            println("✓ Model loaded successfully")
-        } catch (e: Exception) {
-            println("✗ Failed to load model: ${e.message}")
-            throw RuntimeException("ModelSandboxManager initialization failed", e)
+        initializationMutex.withLock {
+            if (interpreter != null) return@withLock
+            try {
+                val modelBuffer = loadModelFromAssets(modelName)
+                interpreter = Interpreter(modelBuffer)
+                println("✓ Model loaded successfully")
+            } catch (e: Exception) {
+                println("✗ Failed to load model: ${e.message}")
+                throw RuntimeException("ModelSandboxManager initialization failed", e)
+            }
         }
     }
 
