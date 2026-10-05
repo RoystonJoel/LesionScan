@@ -106,9 +106,11 @@ class ModelSandboxManager(
 
                 // Map to risk score
                 val riskScore = when (predictedClassIndex) {
-                    0 -> 0.9f   // Melanoma
-                    2 -> 0.7f   // BCC
-                    4 -> 0.5f   // Dermatofibroma
+                    0 -> 0.9f   // Class 0 (likely Melanoma or High risk)
+                    1 -> 0.7f   // Class 1 (Medium risk)
+                    2 -> 0.5f   // Class 2 (Medium-low risk)
+                    3 -> 0.2f   // Class 3 (Low risk)
+                    4 -> 0.2f   // Class 4 (Benign/Low risk)
                     else -> 0.2f
                 } * maxProbability
 
