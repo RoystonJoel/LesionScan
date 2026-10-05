@@ -33,18 +33,16 @@ class ModelSandboxManager(
     }
 
     private fun loadModelFromAssets(modelPath: String): MappedByteBuffer {
-        val assetFileDescriptor = context.assets.openFd(modelPath)
-        val fileInputStream = FileInputStream(assetFileDescriptor.fileDescriptor)
-        val fileChannel = fileInputStream.channel
-
-        val startOffset = assetFileDescriptor.startOffset
-        val declaredLength = assetFileDescriptor.declaredLength
-
-        return fileChannel.map(
-            FileChannel.MapMode.READ_ONLY,
-            startOffset,
-            declaredLength
-        )
+        context.assets.openFd(modelPath).use { assetFileDescriptor ->
+            FileInputStream(assetFileDescriptor.fileDescriptor).use { fileInputStream ->
+                val fileChannel = fileInputStream.channel
+                return fileChannel.map(
+                    FileChannel.MapMode.READ_ONLY,
+                    assetFileDescriptor.startOffset,
+                    assetFileDescriptor.declaredLength
+                )
+            }
+        }
     }
 
     override suspend fun inferenceModel(frameImageArray: FloatArray): Float {
