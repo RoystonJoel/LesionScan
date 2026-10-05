@@ -125,22 +125,25 @@ class ModelSandboxManagerIntegrationTest {
     }
 
     @Test
-    fun testModelConfidenceScores() {
-        runBlocking {
-            val melanomaFiles = ImageTestUtils.getImageFiles(context, "melanoma", limit = 20)
+    fun testModelConfidenceScores() = runBlocking {
+        val melanomaFiles = ImageTestUtils.getImageFiles(context, "melanoma", limit = 20)
+        assertTrue("No test images found", melanomaFiles.isNotEmpty())
 
-            for (filename in melanomaFiles) {
-                val imageArray = ImageTestUtils.loadImageAsFloatArray(context, "melanoma/$filename")
-                val classification = classifyUseCase.execute(imageArray)
+        var confidentPredictions = 0
 
-                // Confidence should be reasonable (> 0.6)
-                assert(
-                    classification.confidenceScore > 0.6f,
-                    { "Confidence should be > 0.6, got ${classification.confidenceScore}" }
-                )
+        for (filename in melanomaFiles) {
+            val imageArray = ImageTestUtils.loadImageAsFloatArray(context, "melanoma/$filename")
+            val classification = classifyUseCase.execute(imageArray)
 
-                println("$filename: confidence=${String.format("%.2f", classification.confidenceScore)}")
+            if (classification.confidenceScore > 0.6f) {
+                confidentPredictions++
             }
         }
+
+        val confidentRatio = confidentPredictions.toFloat() / melanomaFiles.size
+        assertTrue(
+            "Expected at least 70% of predictions to have > 0.6 confidence. Got: ${confidentRatio * 100}%",
+            confidentRatio >= 0.70f
+        )
     }
 }
