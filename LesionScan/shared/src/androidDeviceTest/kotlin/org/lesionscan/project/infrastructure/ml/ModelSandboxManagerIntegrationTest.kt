@@ -3,6 +3,7 @@ package org.lesionscan.project.infrastructure.ml
 import android.content.Context
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.lesionscan.project.domain.entities.RiskLevel
