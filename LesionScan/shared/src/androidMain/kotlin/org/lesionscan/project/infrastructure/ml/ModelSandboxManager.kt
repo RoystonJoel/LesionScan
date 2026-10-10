@@ -62,59 +62,43 @@ class ModelSandboxManager(
         return withContext(Dispatchers.Default) {
             initializeModel()
 
-            val activeInterpreter = interpreter
+            val interpreter = interpreter
                 ?: throw RuntimeException("Interpreter not initialized")
 
             try {
-                // 1. Reset buffer position and load flat array directly
-                inputBuffer.rewind()
+                // Reshape input to [1, 224, 224, 3]
+                val inputData = Array(1) { Array(224) { Array(224) { FloatArray(3) } } }
 
-                val expectedSize = 224 * 224 * 3
-                val limit = minOf(frameImageArray.size, expectedSize)
-
-                // Safely copy only up to the buffer's capacity
-                for (i in 0 until limit) {
-                    inputBuffer.putFloat(frameImageArray[i])
-                }
-
-                // Pad with zeros if the array is smaller than expected
-                for (i in limit until expectedSize) {
-                    inputBuffer.putFloat(0f)
-                }
-
-                // 2. Run inference using the pre-allocated buffer and array
-                val startTime = System.currentTimeMillis()
-                activeInterpreter.run(inputBuffer, outputData)
-                val inferenceTimeMs = System.currentTimeMillis() - startTime
-
-                // 3. Extract and evaluate results
-                val probabilities = outputData[0]
-                println("Probabilities: ${probabilities.contentToString()}")
-
-                // Find class with highest probability
-                var predictedClassIndex = 0
-                var maxProbability = 0f
-                for (i in probabilities.indices) {
-                    if (probabilities[i] > maxProbability) {
-                        maxProbability = probabilities[i]
-                        predictedClassIndex = i
+                var idx = 0
+                for (h in 0 until 224) {
+                    for (w in 0 until 224) {
+                        for (c in 0 until 3) {
+                            inputData[0][h][w][c] = if (idx < frameImageArray.size) frameImageArray[idx++] else 0f
+                        }
                     }
                 }
 
-                println("✓ Predicted class: $predictedClassIndex with probability: ${String.format("%.2f", maxProbability)}")
+                // Output shape [1, 1] - Single probability score
+                val outputData = Array(1) { FloatArray(1) }
+
+                val startTime = System.currentTimeMillis()
+                interpreter.run(inputData, outputData)
+                val inferenceTimeMs = System.currentTimeMillis() - startTime
+
+                // Extract probability
+                val melanomaProbability = outputData[0][0]  // Single value
+
+                println("Melanoma probability: ${String.format("%.2f", melanomaProbability)}")
+
+                // Direct mapping: probability = risk score
+                // 0.7 = 70% chance of melanoma = HIGHinferenceTimeMs risk
+                // 0.3 = 30% chance of melanoma = LOW risk
+                val riskScore = melanomaProbability.coerceIn(0f, 1f)
+
                 println("✓ Inference completed in ${inferenceTimeMs}ms")
+                println("✓ Risk score: ${String.format("%.2f", riskScore)}")
 
-                // Map to risk score
-                val riskScore = when (predictedClassIndex) {
-                    0 -> 0.9f   // Class 0 (likely Melanoma or High risk)
-                    1 -> 0.7f   // Class 1 (Medium risk)
-                    2 -> 0.5f   // Class 2 (Medium-low risk)
-                    3 -> 0.2f   // Class 3 (Low risk)
-                    4 -> 0.2f   // Class 4 (Benign/Low risk)
-                    else -> 0.2f
-                } * maxProbability
-
-                riskScore.coerceIn(0f, 1f)
+                riskScore
 
             } catch (e: Exception) {
                 println("✗ Inference failed: ${e.message}")

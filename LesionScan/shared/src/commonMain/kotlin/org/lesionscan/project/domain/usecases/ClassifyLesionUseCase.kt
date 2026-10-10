@@ -32,7 +32,7 @@ class ClassifyLesionUseCase(
         return LesionClassification(
             riskScore = riskScore,
             riskLevel = riskScore.toRiskLevel(),
-            confidenceScore = 0.95f,  // Placeholder; real model returns this
+            confidenceScore = riskScore,
             inferenceTimeMs = inferenceTimeMs
         )
     }
