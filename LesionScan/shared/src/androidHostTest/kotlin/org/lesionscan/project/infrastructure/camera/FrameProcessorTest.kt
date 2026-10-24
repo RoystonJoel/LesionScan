@@ -4,6 +4,7 @@ package org.lesionscan.project.infrastructure.camera
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
+import org.lesionscan.project.domain.usecases.ValidateFrameUseCase
 
 class FrameProcessorTest {
 
@@ -55,5 +56,38 @@ class FrameProcessorTest {
         val dominantLesionPixels = FloatArray(1000) { 0.3f }
         val dominantArea = processor.calculateLesionArea(dominantLesionPixels)
         assertTrue(dominantArea > 0.5f, "Should detect high lesion area")
+    }
+
+    @Test
+    fun testFrameProcessingLatency() {
+        val validateFrameUseCase = ValidateFrameUseCase()
+
+        // Realistic frame size — matches how CameraStreamingEngine builds floatArray(width*height*3)
+        val width = 640
+        val height = 480
+        val frame = FloatArray(width * height * 3) { i -> (i % 255) / 255f }
+
+        // Warm-up pass, same reasoning as testModelInferenceTime
+        repeat(5) {
+            val lighting = processor.calculateLighting(frame)
+            val sharpness = processor.calculateSharpness(frame, width, height)
+            val lesionArea = processor.calculateLesionArea(frame)
+            validateFrameUseCase.execute(lighting, sharpness, lesionArea)
+        }
+
+        val timings = mutableListOf<Long>()
+        repeat(50) {
+            val start = System.nanoTime()
+            val lighting = processor.calculateLighting(frame)
+            val sharpness = processor.calculateSharpness(frame, width, height)
+            val lesionArea = processor.calculateLesionArea(frame)
+            validateFrameUseCase.execute(lighting, sharpness, lesionArea)
+            timings.add((System.nanoTime() - start) / 1_000_000)
+        }
+
+        val avg = timings.average()
+        val max = timings.max()
+        println("Frame processing — avg: ${avg}ms, max: ${max}ms")
+        assertTrue(avg < 100, "Average frame processing should be < 100ms, got ${avg}ms")
     }
 }
