@@ -59,7 +59,7 @@ class ModelSandboxManagerIntegrationTest {
 
         assertTrue(
             "Model failed to classify melanoma correctly. Accuracy: ${accuracy * 100}%",
-            accuracy >= 0.50f
+            accuracy >= 0.80f
         )
 
         assertTrue(
@@ -97,7 +97,7 @@ class ModelSandboxManagerIntegrationTest {
 
         assertTrue(
             "Model failed to classify benign lesions correctly. Accuracy: ${accuracy * 100}%",
-            accuracy >= 0.40f
+            accuracy >= 0.65f
         )
 
 
