@@ -16,7 +16,10 @@ On-device melanoma detection app built with Kotlin Multiplatform (KMP)
 
 - Android
 - Kotlin Multiplatform
-- Gradle
+- Compose Multiplatform
+- Gradle (if it isn't already installed)
+
+No separate JDK install is needed — android studio or IntelliJ IDEA bundled JDK is sufficient.
 
 3. Setup an android device via Device Manager or plug in your android device via USB ( make sure USB debugging is on via developer options )
 
