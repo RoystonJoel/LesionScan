@@ -6,7 +6,7 @@ On-device melanoma detection app built with Kotlin Multiplatform (KMP)
 
 ## Run Locally
 
-1. Clone the project inside android studio or IntelJIDEA
+1. Clone the project inside android studio or IntelliJ IDEA
 
 ```bash
   git clone https://github.com/RoystonJoel/LesionScan.git
@@ -18,7 +18,7 @@ On-device melanoma detection app built with Kotlin Multiplatform (KMP)
 - Kotlin Multiplatform
 - Gradle
 
-3. Setup an android device via Device Manager or plugin your android device via USB ( make sure USB debugging is on via developer options )
+3. Setup an android device via Device Manager or plug in your android device via USB ( make sure USB debugging is on via developer options )
 
 4. Select AndroidApp from the Run/Debug configuration to run the app
 
