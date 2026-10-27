@@ -1,5 +1,5 @@
  
-# Project Title
+# LesionScan App
 
 On-device melanoma detection app built with Kotlin Multiplatform (KMP) 
 
