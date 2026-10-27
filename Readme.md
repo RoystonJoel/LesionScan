@@ -22,6 +22,8 @@ On-device melanoma detection app built with Kotlin Multiplatform (KMP)
 
 4. Select AndroidApp from the Run/Debug configuration to run the app
 
+5. To be able to run tests make sure to open the project inside LesionScan\LesionScan, so the IDE can detect the Gradle files.
+
 
 
 
