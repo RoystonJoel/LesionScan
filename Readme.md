@@ -35,6 +35,22 @@ No separate JDK install is needed — android studio or IntelliJ IDEA bundled JD
 - On-Device ML Inference: Uses a compressed CoreML or TensorFlow Lite model running completely offline on the device.   
 - Camera Guidance Overlay: An interactive camera UI that guides the user to position the camera at the perfect distance, lighting, and focus level to get an optimal image for classification.  
 
+## Running Tests
+
+The project has three kinds of tests. Make sure you've opened the project at `LesionScan/LesionScan` (per step 5 above) so Gradle can detect them.
+
+**Shared JVM unit tests** (no device needed — `./gradlew testDebugUnitTest` or run via IDE):
+- [FrameProcessorTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/androidHostTest/kotlin/org/lesionscan/project/infrastructure/camera/FrameProcessorTest.kt) — lighting, sharpness and lesion-area calculations
+- [SharedLogicAndroidHostTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/androidHostTest/kotlin/org/lesionscan/project/SharedLogicAndroidHostTest.kt)
+
+**Common (cross-platform) unit tests** (no device needed):
+- [ValidateFrameUseCaseTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/commonTest/kotlin/org/lesionscan/project/project/domain/usecases/ValidateFrameUseCaseTest.kt) — optimal, dark, overexposed and poor-distance frame conditions
+- [LesionClassificationTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/commonTest/kotlin/org/lesionscan/project/project/domain/entities/LesionClassificationTest.kt) — risk-level mapping
+- [FrameQualityStateTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/commonTest/kotlin/org/lesionscan/project/presentation/viewmodels/FrameQualityStateTest.kt)
+- [SharedCommonTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/commonTest/kotlin/org/lesionscan/project/SharedCommonTest.kt)
+
+**Instrumented tests** (requires a connected Android device or emulator — `./gradlew connectedAndroidTest`):
+- [ModelSandboxManagerIntegrationTest.kt](https://github.com/RoystonJoel/LesionScan/blob/main/LesionScan/shared/src/androidDeviceTest/kotlin/org/lesionscan/project/infrastructure/ml/ModelSandboxManagerIntegrationTest.kt) — model accuracy, confidence scores, and inference latency against bundled melanoma/non-melanoma test images
 
 
 ## Architecture
