@@ -1,7 +1,7 @@
  
 # LesionScan App
 
-On-device melanoma detection app built with Kotlin Multiplatform (KMP) 
+On-device melanoma detection app built with Kotlin Multiplatform (KMP) for preliminary detection of skin lesions, built to help a user decide whether a mole or mark on their skin is worth a dermatologist visit. 
 
 
 ## Run Locally
